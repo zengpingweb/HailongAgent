@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长按语音转文字</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(to right, #ff9a9e, #fad0c4);
+        }
+
+        .content {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .mic-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .mic-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(231, 76, 60, 0.5);
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 2;
+            user-select: none;
+        }
+
+        .mic-button:active, .mic-button.active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.7);
+            background: linear-gradient(to bottom, #c0392b, #a93226);
+        }
+
+        .mic-button::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(231, 76, 60, 0.3);
+            z-index: -1;
+            animation: pulse 2s infinite;
+        }
+
+        .mic-button.active::before {
+            animation: pulse-active 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            70% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse-active {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            70% {
+                transform: scale(1.8);
+                opacity: 0.3;
+            }
+            100% {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        .instruction {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .instruction i {
+            color: #e74c3c;
+            margin-right: 8px;
+        }
+
+        .result-section {
+            width: 100%;
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-top: 20px;
+        }
+
+        .result-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .result-section h2 i {
+            margin-right: 10px;
+            color: #3498db;
+        }
+
+        #transcript {
+            min-height: 200px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #ffffff;
+            resize: vertical;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 180px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .copy-btn {
+            background: linear-gradient(to right, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .copy-btn:hover {
+            background: linear-gradient(to right, #27ae60, #219653);
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .clear-btn {
+            background: linear-gradient(to right, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: linear-gradient(to right, #7f8c8d, #6c7a7d);
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(149, 165, 166, 0.4);
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            min-height: 27px;
+            color: #e74c3c;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 25px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.25);
+            margin-top: 20px;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .browser-support {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        .browser-support h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .browser-icons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 24px;
+        }
+
+        .browser-icons i {
+            color: #3498db;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 26px;
+            }
+
+            .header p {
+                font-size: 16px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .mic-container {
+                width: 180px;
+                height: 180px;
+            }
+
+            .mic-button {
+                width: 130px;
+                height: 130px;
+                font-size: 50px;
+            }
+
+            .actions {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .action-btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .mic-container {
+                width: 160px;
+                height: 160px;
+            }
+
+            .mic-button {
+                width: 120px;
+                height: 120px;
+                font-size: 45px;
+            }
+
+            #transcript {
+                font-size: 18px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>长按语音转文字</h1>
+            <p>长按下方麦克风按钮开始说话，松开后即可将语音转换为文字</p>
+        </div>
+
+        <div class="content">
+            <div class="mic-container">
+                <div class="mic-button" id="micButton">
+                    <i class="fas fa-microphone"></i>
+                </div>
+            </div>
+
+            <div class="instruction">
+                <p><i class="fas fa-info-circle"></i> 长按麦克风按钮开始录音，松开按钮结束录音</p>
+                <p><i class="fas fa-lightbulb"></i> 请确保在安静环境中清晰发音以获得最佳识别效果</p>
+            </div>
+
+            <div class="result-section">
+                <h2><i class="fas fa-file-alt"></i> 识别结果</h2>
+                <textarea id="transcript" readonly placeholder="语音识别结果将显示在这里..."></textarea>
+
+                <div class="actions">
+                    <button class="action-btn copy-btn" id="copyBtn">
+                        <i class="fas fa-copy"></i> 复制结果
+                    </button>
+                    <button class="action-btn clear-btn" id="clearBtn">
+                        <i class="fas fa-trash-alt"></i> 清空内容
+                    </button>
+                </div>
+
+                <div class="status" id="status">
+                    <!-- 状态信息将在这里显示 -->
+                </div>
+            </div>
+
+            <div class="browser-support">
+                <h3>支持浏览器</h3>
+                <p>Chrome、Edge、Safari等现代浏览器</p>
+                <div class="browser-icons">
+                    <i class="fab fa-chrome"></i>
+                    <i class="fab fa-edge"></i>
+                    <i class="fab fa-safari"></i>
+                    <i class="fab fa-firefox"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            使用浏览器原生语音识别功能 | 所有处理在本地完成 | 无需上传任何数据
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const micButton = document.getElementById('micButton');
+        const transcriptEl = document.getElementById('transcript');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusEl = document.getElementById('status');
+
+        // 检查浏览器支持情况
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isRecording = false;
+        let pressTimer;
+
+        // 设置状态信息
+        function setStatus(text, isError = false) {
+            statusEl.textContent = text;
+            statusEl.style.color = isError ? '#e74c3c' : '#2ecc71';
+        }
+
+        // 初始化语音识别
+        function initSpeechRecognition() {
+            if (!SpeechRecognition) {
+                setStatus('您的浏览器不支持语音识别功能', true);
+                micButton.style.opacity = '0.6';
+                micButton.style.cursor = 'not-allowed';
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'zh-CN';
+            recognition.interimResults = false;
+
+            // 语音识别开始
+            recognition.onstart = () => {
+                isRecording = true;
+                micButton.classList.add('active');
+                setStatus('正在录音...');
+            };
+
+            // 语音识别结果
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                transcriptEl.value += transcript;
+                setStatus('识别完成');
+            };
+
+            // 语音识别结束
+            recognition.onend = () => {
+                isRecording = false;
+                micButton.classList.remove('active');
+            };
+
+            // 错误处理
+            recognition.onerror = (event) => {
+                isRecording = false;
+                micButton.classList.remove('active');
+
+                if (event.error === 'not-allowed') {
+                    setStatus('请允许访问麦克风', true);
+                } else {
+                    setStatus(`识别错误: ${event.error}`, true);
+                }
+            };
+        }
+
+        // 开始录音
+        function startRecording() {
+            if (isRecording) return;
+
+            try {
+                recognition.start();
+            } catch (error) {
+                setStatus('无法启动录音', true);
+                console.error('语音识别启动失败:', error);
+            }
+        }
+
+        // 停止录音
+        function stopRecording() {
+            if (isRecording) {
+                recognition.stop();
+            }
+        }
+
+        // 复制文本
+        copyBtn.addEventListener('click', () => {
+            if (transcriptEl.value) {
+                transcriptEl.select();
+                document.execCommand('copy');
+                setStatus('文本已复制到剪贴板');
+
+                // 显示复制成功反馈
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 2000);
+            } else {
+                setStatus('没有内容可复制', true);
+            }
+        });
+
+        // 清空文本
+        clearBtn.addEventListener('click', () => {
+            transcriptEl.value = '';
+            setStatus('内容已清空');
+        });
+
+        // 长按事件处理
+        micButton.addEventListener('mousedown', () => {
+            if (!SpeechRecognition) return;
+
+            pressTimer = setTimeout(() => {
+                startRecording();
+            }, 300); // 300ms后视为长按
+        });
+
+        micButton.addEventListener('touchstart', (e) => {
+            if (!SpeechRecognition) return;
+
+            e.preventDefault(); // 防止触摸滚动
+            pressTimer = setTimeout(() => {
+                startRecording();
+            }, 300);
+        });
+
+        // 松开按钮事件
+        const stopRecordingEvent = () => {
+            clearTimeout(pressTimer);
+            if (isRecording) {
+                stopRecording();
+            }
+        };
+
+        micButton.addEventListener('mouseup', stopRecordingEvent);
+        micButton.addEventListener('mouseleave', stopRecordingEvent);
+        micButton.addEventListener('touchend', stopRecordingEvent);
+        micButton.addEventListener('touchcancel', stopRecordingEvent);
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            // 检查麦克风权限
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(() => {
+                        initSpeechRecognition();
+                        setStatus('准备就绪');
+                    })
+                    .catch(error => {
+                        console.error('麦克风权限被拒绝:', error);
+                        setStatus('请允许访问麦克风', true);
+                        micButton.style.opacity = '0.6';
+                        micButton.style.cursor = 'not-allowed';
+                    });
+            } else {
+                setStatus('您的浏览器不支持音频输入', true);
+                micButton.style.opacity = '0.6';
+                micButton.style.cursor = 'not-allowed';
+            }
+        });
+    </script>
+</body>
+</html>
